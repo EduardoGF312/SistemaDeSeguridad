@@ -59,6 +59,7 @@ export default function LoginScreen({ navigation }) {
     //OCULTAR ALERTA SUCCES Y MANDAR AL SUARIO A LA PANTALLA HOME
     const hideSuccessAlertHandler = (username) => {
         setShowSuccessAlert(false);
+        //SE MANDA LA VARIABLE USERNAME A LA PANTALLA HOME
         navigation.navigate('Home', {username});
         setIsLoggedIn(true);
         setTimeRemaining(180);
@@ -179,7 +180,9 @@ export default function LoginScreen({ navigation }) {
                 showConfirmButton={true}
                 confirmText='OK'
                 onConfirmPressed={() => {
+                    //SE DECODIFICA EL TOKEN
                     const decodedToken = jwtDecode(token);
+                    //SE OBTIENE EL USERNAME DEL TOKEN YA DECODIFICADO
                     const username = decodedToken.username;
                     hideSuccessAlertHandler(username);
                 }}
