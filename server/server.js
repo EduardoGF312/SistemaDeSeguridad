@@ -13,7 +13,8 @@ db.once('open', () => console.log('Conectado a la base de datos'))
 
 app.use(express.json())
 
-app.use(cors())
+// Habilita CORS solo para la ruta /api/login/userlogin
+app.use('/api/login/userlogin', cors());
 
 const loginRouter = require('./routes/login')
 app.use('/api/login', loginRouter)

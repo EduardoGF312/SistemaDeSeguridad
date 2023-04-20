@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar, SafeAreaView } from "react-native";
+import React, { useState, useEffect, useContext } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar, SafeAreaView, BackHandler } from "react-native";
 import Icon from 'react-native-vector-icons/FontAwesome';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import AwesomeAlert from 'react-native-awesome-alerts';
 import jwtDecode from 'jwt-decode';
+import { ToastAndroid } from 'react-native';
+import AppContext from '../components/AppContext';
 
-
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen({ navigation, route }) {
+    const { uid } = route.params;
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     //CONSTANTES PARA CONTROLAR EL ESTADO DE LA ALERTA SUCCESS
@@ -24,7 +26,27 @@ export default function LoginScreen({ navigation }) {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     //CONSTANTE PARA VERIFICAR QUE EL USUARIO CAMBIO DE PANTALLA Y SE PAUSE EL CONTADOR
     const [isOnHomeScreen, setIsOnHomeScreen] = useState(false);
-    const[token, setToken] = useState(null);
+    const [token, setToken] = useState(null);
+    const [backButtonCount, setBackButtonCount] = useState(0);
+    const { resetButtonCount } = useContext(AppContext);
+
+    // Función para detectar el botón de retroceso y mostrar un mensaje
+    useEffect(() => {
+        const backAction = () => {
+            if (backButtonCount < 1) {
+                setBackButtonCount(backButtonCount + 1);
+                ToastAndroid.show('Presiona de nuevo para salir', ToastAndroid.SHORT);
+                return true;
+            } else {
+                BackHandler.exitApp();
+                return false;
+            }
+        };
+
+        const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+
+        return () => backHandler.remove();
+    }, [backButtonCount]);
 
     useEffect(() => {
         const intervalId = setInterval(() => {
@@ -33,9 +55,20 @@ export default function LoginScreen({ navigation }) {
             }
         }, 1000); // Actualizar cada 1000 ms (1 segundo)
 
-        const timeoutId = setTimeout(() => {
+        const timeoutId = setTimeout(async () => {
             if (!isLoggedIn) {
-                navigation.navigate('Rfid');
+                try {
+                    await axios.get('https://blynk.cloud/external/api/update?token=Dx1InWoXSFRWQZszOKzWzURNuQk0MGG-&v1=""'); // Limpia V1 en Blynk
+                    // navigation.navigate('Rfid');
+                    navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'Rfid'}],
+                    });
+                    resetButtonCount();
+                } catch (error) {
+                    console.log(error);
+                }
+                // navigation.navigate('Rfid');
             }
         }, 180000); // 3 minutos = 180000 ms
 
@@ -58,9 +91,14 @@ export default function LoginScreen({ navigation }) {
 
     //OCULTAR ALERTA SUCCES Y MANDAR AL SUARIO A LA PANTALLA HOME
     const hideSuccessAlertHandler = (username) => {
+        const loginTime = new Date().toISOString();
+
         setShowSuccessAlert(false);
         //SE MANDA LA VARIABLE USERNAME A LA PANTALLA HOME
-        navigation.navigate('Home', {username});
+        navigation.reset({
+            index: 0,
+            routes: [{name: 'Home', params: { username, uid, loginTime }}],
+        });
         setIsLoggedIn(true);
         setTimeRemaining(180);
         setIsOnHomeScreen(true);
